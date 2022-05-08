@@ -1,12 +1,45 @@
 import re
+from datetime import datetime
+
+checked_numbers = []
 
 checked_fields = {
-    'naissance': r'[0-9]{4}',
-    'date': r'\d{4}',
-    'taille': r'[0-9]{2,3}cm',
-    'yeux': r'[a-z]*',
-    'numero': r'[0-9]*',
-    'pays': r'[0-9]*',
+    'naissance': r'\d{2}/\d{2}/\d{4}',
+    'date': r'\d{2}/\d{2}/\d{4}',
+    'taille': r'\d{2,3}cm',
+    'yeux': r'[a-z]+',
+    'numero': r'\d+',
+    'pays': r'[A-Za-z]+',
+}
+
+
+def is_date_valid(date_string, limit_date=datetime.strptime("01/03/2020", "%d/%m/%Y")):
+    try:
+        date = datetime.strptime(date_string, "%d/%m/%Y")
+        return limit_date >= date
+    except ValueError:
+        return False
+
+
+def is_passport_number_valid(number_string):
+    global checked_numbers
+
+    number = int(number_string)
+    if number in checked_numbers:
+        return False
+
+    checked_numbers.append(number)
+    return True
+
+
+def is_color_valid(color):
+    return color in {'marron', 'bleu', 'vert', 'gris'}
+
+
+fields_verification = {
+    'date': is_date_valid,
+    'numero': is_passport_number_valid,
+    'yeux': is_color_valid
 }
 
 optional_fields = {'pays'}
@@ -19,7 +52,7 @@ def get_string_records():
     Reads input passports file.
     :return: list of string passport records
     """
-    file = open('passeports.txt', 'r')
+    file = open('passeports2.txt', 'r')
     content = file.read()
 
     return content.strip().split('\n\n')
@@ -36,7 +69,7 @@ def is_field_valid(field, record):
     if record.count(field) > 1:
         return False
 
-    # Check if field is present only once as field name
+    # Check if field is presented only once as field name
     if f'{field}:' not in record:
         return field in optional_fields
 
@@ -50,6 +83,10 @@ def is_field_valid(field, record):
 
     if field_value in forbidden:
         return False
+
+    # Additional verification for certain fields
+    if field in fields_verification:
+        return fields_verification[field](field_value)
 
     return True
 
@@ -74,4 +111,3 @@ if __name__ == '__main__':
                 break
 
     print('Valid records:', len(records) - invalid_count)
-
